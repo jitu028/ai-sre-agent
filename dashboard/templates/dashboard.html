@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRE Autopilot Operations Hub</title>
+    
+    <!-- Tailwind CSS with Typography Plugin -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gcp: {
+                            blue: '#1a73e8',
+                            blueDark: '#185abc',
+                            blueLight: '#e8f0fe',
+                            red: '#ea4335',
+                            redLight: '#fce8e6',
+                            yellow: '#fbbc05',
+                            yellowLight: '#fef7e0',
+                            green: '#34a853',
+                            greenLight: '#e6f4ea',
+                            grayBg: '#f8f9fa',
+                            darkBg: '#202124',
+                            darkCard: '#2d2e30',
+                            border: '#dadce0',
+                            darkBorder: '#3c4043'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Google Sans"', 'Roboto', 'Arial', 'sans-serif'],
+                        mono: ['"Roboto Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@300;400;500;700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+        h1, h2, h3, h4, .google-font {
+            font-family: 'Outfit', 'Google Sans', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        /* Custom scrollbar for consoles */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #dadce0;
+            border-radius: 4px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #5f6368;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9aa0a6;
+        }
+        
+        /* Pulse animations for status */
+        @keyframes pulse-green {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.6; }
+        }
+        @keyframes pulse-red {
+            0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(234, 67, 53, 0.7); }
+            50% { transform: scale(1.25); opacity: 0.5; box-shadow: 0 0 0 6px rgba(234, 67, 53, 0); }
+        }
+        .pulse-indicator-green {
+            animation: pulse-green 2s infinite ease-in-out;
+        }
+        .pulse-indicator-red {
+            animation: pulse-red 1.5s infinite ease-in-out;
+        }
+        
+        /* Timeline item entrance animation */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .timeline-item-anim {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        
+        /* Toast animation */
+        @keyframes toast-slide-in {
+            from { transform: translateY(1rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-entrance {
+            animation: toast-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="bg-gcp-grayBg text-gray-900 dark:bg-gcp-darkBg dark:text-gray-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Sleek Custom Operations Header -->
+    <header class="bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between px-6 py-3 shadow-sm z-30 select-none">
+        <!-- Left: Logo & Target Project -->
+        <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-3">
+                <!-- Custom Brain/SRE Shield logo -->
+                <div class="bg-indigo-600/20 p-1.5 rounded-lg border border-indigo-500/30">
+                    <span class="material-symbols-outlined text-indigo-400 text-2xl block">psychology</span>
+                </div>
+                <span class="font-bold text-xl tracking-tight bg-gradient-to-r from-indigo-400 to-violet-300 bg-clip-text text-transparent google-font">SRE Autopilot</span>
+            </div>
+            <div class="h-6 w-[1px] bg-slate-800"></div>
+            <!-- Active GCP Target Indicator -->
+            <div class="flex items-center space-x-2 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs text-slate-300">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Active Project:</span>
+                <span class="font-mono text-white font-semibold">{{ project_id }}</span>
+            </div>
+        </div>
+
+        <!-- Right: Actions & User Info -->
+        <div class="flex items-center space-x-4">
+            <!-- Theme Toggle -->
+            <button id="theme-toggle-btn" class="p-2 hover:bg-slate-800 rounded-lg border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-all relative" title="Toggle Light/Dark Theme">
+                <span class="material-symbols-outlined text-xl" id="theme-toggle-icon">dark_mode</span>
+            </button>
+            <div class="h-8 w-[1px] bg-slate-800"></div>
+            <div class="flex items-center space-x-3">
+                <div class="text-right hidden sm:block">
+                    <p class="text-xs font-semibold text-white">SRE Operator</p>
+                    <p class="text-[10px] text-slate-400">demo-session</p>
+                </div>
+                <div class="h-9 w-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm border border-indigo-500 cursor-pointer select-none">
+                    OP
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sub Header: Breadcrumbs & Operations center controls -->
+    <section class="bg-white dark:bg-gcp-darkCard border-b border-gcp-border dark:border-gcp-darkBorder px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 transition-colors">
+        <div>
+            <!-- Breadcrumbs -->
+            <div class="flex items-center space-x-1 text-xs text-slate-400 dark:text-slate-500 mb-1.5">
+                <span>Autonomous Ops</span>
+                <span class="material-symbols-outlined text-xs">chevron_right</span>
+                <span>Platform Controls</span>
+                <span class="material-symbols-outlined text-xs">chevron_right</span>
+                <span class="font-medium text-indigo-600 dark:text-indigo-400">Autopilot Dashboard</span>
+            </div>
+            <!-- Title -->
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-lg">
+                    <span class="material-symbols-outlined text-indigo-600 dark:text-indigo-400 text-2xl block">dashboard</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight google-font" id="main-title">SRE Autopilot Operations Hub</h1>
+                    <p class="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Powered by Google ADK + Gemini + GCP Revisions</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls (Simulation Trigger, Restore, Time, Alert Status) -->
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Clock -->
+            <div class="bg-gray-100 dark:bg-gcp-darkBg px-3 py-1.5 rounded border border-gcp-border dark:border-gcp-darkBorder text-sm font-mono flex items-center space-x-2">
+                <span class="material-symbols-outlined text-sm text-gray-400">schedule</span>
+                <span id="current-clock">00:00:00</span>
+            </div>
+
+            <!-- Incident State Label -->
+            <div id="incident-badge" class="px-3 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 border transition-all">
+                <span class="w-2.5 h-2.5 rounded-full inline-block" id="incident-badge-dot"></span>
+                <span id="incident-badge-text">Healthy</span>
+            </div>
+
+            <!-- Action buttons -->
+            <button 
+                id="btn-trigger" 
+                hx-post="/api/trigger_incident" 
+                hx-swap="none"
+                class="bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-1.5 disabled:opacity-50 border border-rose-500/30"
+            >
+                <span class="material-symbols-outlined text-sm">warning</span>
+                <span>Trigger Incident</span>
+            </button>
+            
+            <button 
+                id="btn-restore" 
+                hx-post="/api/restore" 
+                hx-swap="none"
+                class="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 hover:text-white font-semibold text-sm px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center space-x-1.5 border border-slate-700"
+            >
+                <span class="material-symbols-outlined text-sm">sync</span>
+                <span>Restore Baseline</span>
+            </button>
+        </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-6 grid grid-cols-1 xl:grid-cols-3 gap-6 overflow-hidden">
+        
+        <!-- COLUMN 1 & 2: TELEMETRY, LOGS, METRICS (Takes 2/3 space) -->
+        <div class="xl:col-span-2 flex flex-col space-y-6">
+            
+            <!-- Cards: System Health -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Availability -->
+                <div class="bg-white dark:bg-gcp-darkCard p-4 rounded-lg border border-gcp-border dark:border-gcp-darkBorder flex items-center justify-between transition-all">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Availability</p>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mt-1 font-mono" id="card-availability">100%</h3>
+                    </div>
+                    <div class="p-3 bg-green-50 dark:bg-green-950 rounded-full" id="icon-availability-bg">
+                        <span class="material-symbols-outlined text-gcp-green text-2xl" id="icon-availability">check_circle</span>
+                    </div>
+                </div>
+
+                <!-- Latency -->
+                <div class="bg-white dark:bg-gcp-darkCard p-4 rounded-lg border border-gcp-border dark:border-gcp-darkBorder flex items-center justify-between transition-all">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Latency</p>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mt-1 font-mono" id="card-latency">110 ms</h3>
+                    </div>
+                    <div class="p-3 bg-blue-50 dark:bg-blue-950 rounded-full" id="icon-latency-bg">
+                        <span class="material-symbols-outlined text-gcp-blue text-2xl" id="icon-latency">speed</span>
+                    </div>
+                </div>
+
+                <!-- HTTP Error Rate -->
+                <div class="bg-white dark:bg-gcp-darkCard p-4 rounded-lg border border-gcp-border dark:border-gcp-darkBorder flex items-center justify-between transition-all">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">HTTP Error Rate</p>
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mt-1 font-mono" id="card-error-rate">0.0%</h3>
+                    </div>
+                    <div class="p-3 bg-green-50 dark:bg-green-950 rounded-full" id="icon-error-bg">
+                        <span class="material-symbols-outlined text-gcp-green text-2xl" id="icon-error">error</span>
+                    </div>
+                </div>
+
+                <!-- Cloud Run Revision -->
+                <div class="bg-white dark:bg-gcp-darkCard p-4 rounded-lg border border-gcp-border dark:border-gcp-darkBorder flex items-center justify-between transition-all">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Revision Version</p>
+                        <h3 class="text-sm font-bold text-gray-900 dark:text-white mt-2 truncate w-40 font-mono" id="card-revision">payment-service-v14</h3>
+                    </div>
+                    <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-full">
+                        <span class="material-symbols-outlined text-gray-500 dark:text-gray-400 text-2xl">layers</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metrics Panel (Charts) -->
+            <div class="bg-white dark:bg-gcp-darkCard p-5 rounded-lg border border-gcp-border dark:border-gcp-darkBorder flex flex-col transition-colors">
+                <div class="flex items-center justify-between pb-4 border-b border-gcp-border dark:border-gcp-darkBorder">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-symbols-outlined text-gcp-blue">insights</span>
+                        <h2 class="font-semibold text-base text-gray-900 dark:text-white google-font">Live Metrics Dashboard</h2>
+                    </div>
+                    <span class="text-xs text-gray-500 font-mono" id="metrics-update-status">Live Updating (2s)</span>
+                </div>
+                
+                <!-- Chart grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <!-- Request Rate & Latency -->
+                    <div class="h-64 relative bg-gray-50 dark:bg-gcp-darkBg p-3 rounded border border-gray-200 dark:border-gcp-darkBorder">
+                        <h4 class="text-xs font-medium text-gray-500 mb-2">Request Rate (rps) & Latency (ms)</h4>
+                        <canvas id="chart-rate-latency"></canvas>
+                    </div>
+                    <!-- HTTP 500 Failures -->
+                    <div class="h-64 relative bg-gray-50 dark:bg-gcp-darkBg p-3 rounded border border-gray-200 dark:border-gcp-darkBorder">
+                        <h4 class="text-xs font-medium text-gray-500 mb-2">HTTP 500 Error rate (%)</h4>
+                        <canvas id="chart-errors"></canvas>
+                    </div>
+                    <!-- CPU/Memory -->
+                    <div class="h-64 relative bg-gray-50 dark:bg-gcp-darkBg p-3 rounded border border-gray-200 dark:border-gcp-darkBorder md:col-span-2">
+                        <h4 class="text-xs font-medium text-gray-500 mb-2">Cloud Run Container Resource Utilization (%)</h4>
+                        <canvas id="chart-resources"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Panel -->
+            <div class="bg-white dark:bg-gcp-darkCard p-5 rounded-lg border border-gcp-border dark:border-gcp-darkBorder flex flex-col flex-1 min-h-[350px] transition-colors">
+                <div class="flex items-center justify-between pb-4 border-b border-gcp-border dark:border-gcp-darkBorder">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-symbols-outlined text-gcp-blue">view_headline</span>
+                        <h2 class="font-semibold text-base text-gray-900 dark:text-white google-font">Cloud Run Live Logs</h2>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="flex items-center space-x-2">
+                        <label for="severity-filter" class="text-xs text-gray-500 dark:text-gray-400">Severity:</label>
+                        <select 
+                            id="severity-filter" 
+                            class="bg-gray-50 dark:bg-gcp-darkBg border border-gcp-border dark:border-gcp-darkBorder rounded text-xs px-2 py-1 outline-none text-gray-700 dark:text-gray-300"
+                            onchange="fetchLogs()"
+                        >
+                            <option value="">ALL LEVELS</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Logs list -->
+                <div class="flex-1 mt-4 bg-gray-950 text-gray-200 p-4 rounded font-mono text-xs overflow-y-auto max-h-[300px] custom-scrollbar border border-gray-900 leading-relaxed" id="logs-container">
+                    <div class="text-gray-500 italic">Connecting to logging service...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMN 3: ADK CHAT, INCIDENT TIMELINE, REMEDIATION, RCA (Takes 1/3 space) -->
+        <div class="flex flex-col space-y-6">
+            
+            <!-- ADK Chat Window -->
+            <div class="bg-white dark:bg-gcp-darkCard rounded-lg border border-gcp-border dark:border-gcp-darkBorder flex flex-col h-[480px] transition-colors">
+                <!-- Chat header -->
+                <div class="bg-gcp-blue text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-symbols-outlined">forum</span>
+                        <div>
+                            <h2 class="font-semibold text-sm leading-tight google-font">ADK SRE Agent Chat</h2>
+                            <p class="text-[10px] text-blue-100">IncidentResponseAgent - Online</p>
+                        </div>
+                    </div>
+                    <span class="w-2.5 h-2.5 bg-green-400 rounded-full inline-block animate-ping"></span>
+                </div>
+
+                <!-- Chat history scroll area -->
+                <div class="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-3 bg-gray-50 dark:bg-[#1a1b1c]" id="chat-messages-container">
+                    <div class="text-center text-xs text-gray-500 my-4">Conversation started</div>
+                    <!-- Messages render here -->
+                </div>
+
+                <!-- Approval Gate Actions (Appears only during Waiting Approval) -->
+                <div id="approval-actions-panel" class="hidden p-3 bg-yellow-50 dark:bg-yellow-950 border-t border-b border-yellow-200 dark:border-yellow-900 flex flex-col space-y-2">
+                    <p class="text-xs text-yellow-800 dark:text-yellow-300 font-medium">⚠️ Action Required: Rollback Approval Needed</p>
+                    <div class="flex space-x-2">
+                        <button
+                            onclick="approveRollback(this)"
+                            class="flex-1 bg-gcp-green hover:bg-green-700 text-white font-medium text-xs py-2 rounded transition-colors flex items-center justify-center space-x-1"
+                        >
+                            <span class="material-symbols-outlined text-sm">check</span>
+                            <span>Approve Rollback</span>
+                        </button>
+                        <button
+                            onclick="rejectRollback(this)"
+                            class="flex-1 bg-gcp-red hover:bg-red-700 text-white font-medium text-xs py-2 rounded transition-colors flex items-center justify-center space-x-1"
+                        >
+                            <span class="material-symbols-outlined text-sm">close</span>
+                            <span>Reject Action</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chat input form -->
+                <form id="chat-form" onsubmit="sendChatMessage(event)" class="p-3 border-t border-gcp-border dark:border-gcp-darkBorder flex items-center space-x-2">
+                    <input 
+                        type="text" 
+                        id="chat-input-field" 
+                        placeholder="Ask agent to investigate, list, or rollback..." 
+                        class="flex-1 bg-gray-100 dark:bg-gcp-darkBg border border-gcp-border dark:border-gcp-darkBorder rounded-md text-sm px-3 py-2 outline-none focus:border-gcp-blue focus:bg-white dark:focus:bg-gcp-darkCard"
+                    />
+                    <button type="submit" class="bg-gcp-blue hover:bg-gcp-blueDark text-white p-2 rounded-md transition-colors flex items-center justify-center">
+                        <span class="material-symbols-outlined text-sm">send</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Remediation Progress (Conditional) -->
+            <div id="remediation-panel" class="bg-white dark:bg-gcp-darkCard p-5 rounded-lg border border-gcp-border dark:border-gcp-darkBorder transition-colors flex flex-col">
+                <div class="flex items-center space-x-2 pb-3 border-b border-gcp-border dark:border-gcp-darkBorder">
+                    <span class="material-symbols-outlined text-gcp-blue">sync_alt</span>
+                    <h2 class="font-semibold text-sm text-gray-900 dark:text-white google-font">Remediation Status</h2>
+                </div>
+                <div class="mt-4 space-y-3">
+                    <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span id="remediation-step-label">Current Step: Idle</span>
+                        <span id="remediation-percent-label" class="font-mono font-medium text-gray-900 dark:text-white">0%</span>
+                    </div>
+                    <!-- Bar -->
+                    <div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                        <div id="remediation-progress-bar" class="bg-gcp-blue h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Reasoning Panel (Conditional) -->
+            <div id="reasoning-panel" class="hidden bg-white dark:bg-gcp-darkCard p-5 rounded-lg border border-gcp-border dark:border-gcp-darkBorder transition-all duration-300 flex flex-col">
+                <div class="flex items-center justify-between pb-3 border-b border-gcp-border dark:border-gcp-darkBorder">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-symbols-outlined text-purple-600 dark:text-purple-400">psychology</span>
+                        <h2 class="font-semibold text-sm text-gray-900 dark:text-white google-font">Gemini SRE Reasoning</h2>
+                    </div>
+                    <!-- Confidence -->
+                    <span id="reasoning-confidence" class="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded-full text-[10px] font-semibold font-mono">Confidence: 96%</span>
+                </div>
+                
+                <div class="mt-4 space-y-4 text-xs">
+                    <div>
+                        <span class="font-semibold text-gray-700 dark:text-gray-300 block">Observed Symptoms:</span>
+                        <p id="reasoning-symptoms" class="text-gray-500 dark:text-gray-400 mt-1"></p>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-700 dark:text-gray-300 block">Evidence Checked:</span>
+                        <p id="reasoning-evidence" class="text-gray-500 dark:text-gray-400 mt-1 font-mono text-[10px] bg-gray-50 dark:bg-gcp-darkBg p-1.5 rounded"></p>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-700 dark:text-gray-300 block">Identified Root Cause:</span>
+                        <p id="reasoning-root-cause" class="text-gray-900 dark:text-white font-medium mt-1 bg-red-50 dark:bg-red-950/20 p-2 border-l-2 border-gcp-red rounded"></p>
+                    </div>
+                    <div>
+                        <span class="font-semibold text-gray-700 dark:text-gray-300 block">Recommended Action:</span>
+                        <p id="reasoning-action" class="text-gcp-blue font-medium mt-1"></p>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-400 font-mono border-t border-gcp-border dark:border-gcp-darkBorder pt-2">
+                        <span>Recovery Est: <strong class="text-gray-600 dark:text-gray-300" id="reasoning-recovery">30s</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Incident Report Panel (Appears when completed) -->
+            <div id="report-panel" class="hidden bg-white dark:bg-gcp-darkCard p-5 rounded-lg border border-gcp-border dark:border-gcp-darkBorder transition-all duration-300 flex flex-col">
+                <div class="flex items-center justify-between pb-3 border-b border-gcp-border dark:border-gcp-darkBorder mb-3">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-symbols-outlined text-gcp-green">description</span>
+                        <h2 class="font-semibold text-sm text-gray-900 dark:text-white google-font">Incident Post-Mortem</h2>
+                    </div>
+                    <!-- Actions -->
+                    <div class="flex items-center space-x-1">
+                        <button onclick="copyReport()" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" title="Copy Markdown">
+                            <span class="material-symbols-outlined text-xs text-gray-500">content_copy</span>
+                        </button>
+                        <button onclick="downloadReport()" class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded" title="Download Report">
+                            <span class="material-symbols-outlined text-xs text-gray-500">download</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Report Render Container -->
+                <div class="text-xs overflow-y-auto max-h-[350px] custom-scrollbar prose dark:prose-invert prose-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gcp-darkBg p-3 rounded border border-gray-200 dark:border-gcp-darkBorder leading-relaxed font-sans" id="report-content">
+                    Loading report...
+                </div>
+            </div>
+
+            <!-- Live Incident Timeline -->
+            <div class="bg-white dark:bg-gcp-darkCard p-5 rounded-lg border border-gcp-border dark:border-gcp-darkBorder transition-colors flex flex-col flex-1 min-h-[300px]">
+                <div class="flex items-center justify-between pb-3 border-b border-gcp-border dark:border-gcp-darkBorder">
+                    <div class="flex items-center space-x-2">
+                        <span class="material-symbols-outlined text-gcp-blue">history</span>
+                        <h2 class="font-semibold text-sm text-gray-900 dark:text-white google-font">Live Timeline</h2>
+                    </div>
+                    <span class="text-xs text-gray-400" id="timeline-count">0 events</span>
+                </div>
+                
+                <!-- Timeline container -->
+                <div class="flex-1 mt-4 overflow-y-auto custom-scrollbar space-y-4 max-h-[300px] relative pr-1" id="timeline-container">
+                    <!-- Events list -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Cloud Run Details Panel -->
+    <section class="bg-white dark:bg-gcp-darkCard border-t border-gcp-border dark:border-gcp-darkBorder px-6 py-4 transition-colors">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+            <div class="flex items-center space-x-4">
+                <span class="material-symbols-outlined text-gcp-blue text-2xl">layers</span>
+                <div>
+                    <h4 class="text-xs text-gray-500 uppercase tracking-wider">Cloud Run Deployment</h4>
+                    <div class="flex items-center space-x-3 mt-0.5">
+                        <span class="text-sm font-semibold font-mono text-gray-800 dark:text-white" id="cloudrun-current-rev">payment-service-v14</span>
+                        <span class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-gcp-blue dark:text-blue-300 rounded font-mono font-medium" id="cloudrun-traffic-split">100% traffic</span>
+                        <span class="text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-gcp-green dark:text-green-300 rounded font-mono font-medium" id="cloudrun-status">HEALTHY</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <button class="px-3 py-1.5 border border-gcp-border dark:border-gcp-darkBorder hover:bg-gray-50 dark:hover:bg-gray-800 rounded text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors" onclick="showToast('Querying active GCP revisions from Cloud Run... Active: payment-service-v14 (100% traffic, healthy), Degraded: payment-service-v15 (0% traffic, degraded)', 'info')">View Revisions</button>
+                <button class="px-3 py-1.5 border border-gcp-border dark:border-gcp-darkBorder hover:bg-gray-50 dark:hover:bg-gray-800 rounded text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors" onclick="showToast('Telemetry streaming is live! See live metric charts above for request rates, latencies, error rates, and CPU utilization.', 'success')">View Metrics</button>
+                <button class="px-3 py-1.5 bg-gcp-blue hover:bg-gcp-blueDark text-white rounded text-xs font-medium px-4 py-2 transition-colors flex items-center space-x-1" onclick="triggerManualRollback(this)">
+                    <span class="material-symbols-outlined text-sm">history_toggle_off</span>
+                    <span>Manual Rollback</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-200 dark:bg-[#1a1b1c] text-xs text-gray-500 dark:text-gray-400 py-3 px-6 border-t border-gcp-border dark:border-gcp-darkBorder flex items-center justify-between transition-colors select-none">
+        <div class="flex items-center space-x-4">
+            <a href="https://github.com" target="_blank" class="hover:text-gcp-blue flex items-center space-x-1">
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                <span>GitHub</span>
+            </a>
+            <span>•</span>
+            <span>Google ADK v1.36.0</span>
+            <span>•</span>
+            <span>Model: <strong class="text-gray-700 dark:text-gray-300 font-mono">{{ gemini_model }}</strong></span>
+            <span>•</span>
+            <span>Region: <strong class="text-gray-700 dark:text-gray-300 font-mono">{{ location }}</strong></span>
+            <span>•</span>
+            <span>Cloud Run MCP</span>
+        </div>
+        <div>
+            <span>Version 1.0.0</span>
+        </div>
+    </footer>
+
+    <!-- Scripting for live interaction -->
+    <script>
+        // Global visual SRE JS error debugger
+        window.addEventListener('error', function(event) {
+            if (typeof showToast !== 'undefined') {
+                showToast(`Browser JS Error: ${event.message} (Line ${event.lineno} in ${event.filename.split('/').pop()})`, "error", 10000);
+            } else {
+                alert(`Browser JS Error: ${event.message}`);
+            }
+        });
+        
+        window.addEventListener('unhandledrejection', function(event) {
+            if (typeof showToast !== 'undefined') {
+                showToast(`Promise Rejected: ${event.reason}`, "error", 10000);
+            } else {
+                alert(`Promise Rejected: ${event.reason}`);
+            }
+        });
+
+        // Clock Update
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('current-clock').innerText = now.toTimeString().split(' ')[0];
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Theme Toggle Logic
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const themeToggleIcon = document.getElementById('theme-toggle-icon');
+        
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+                themeToggleIcon.innerText = 'light_mode';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.add('light');
+                document.documentElement.classList.remove('dark');
+                themeToggleIcon.innerText = 'dark_mode';
+                localStorage.setItem('theme', 'light');
+            }
+            // Re-render charts for theme compatibility if needed
+            updateChartThemeColors(theme);
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        });
+
+        // Chart.js Configurations (Declared first to avoid temporal dead zone errors during setTheme)
+        let chartRateLatency, chartErrors, chartResources;
+
+        // Initialize theme from storage
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        setTheme(savedTheme);
+        
+        function getChartColors(theme) {
+            const isDark = theme === 'dark';
+            return {
+                text: isDark ? '#e8eaed' : '#5f6368',
+                grid: isDark ? '#3c4043' : '#e8eaed',
+                rateColor: '#1a73e8',
+                latencyColor: '#fbbc05',
+                errorColor: '#ea4335',
+                cpuColor: '#8ab4f8',
+                memColor: '#c58af9'
+            };
+        }
+
+        function updateChartThemeColors(theme) {
+            const colors = getChartColors(theme);
+            [chartRateLatency, chartErrors, chartResources].forEach(chart => {
+                if (chart) {
+                    chart.options.scales.x.grid.color = colors.grid;
+                    chart.options.scales.y.grid.color = colors.grid;
+                    if (chart.options.scales.y1) chart.options.scales.y1.grid.color = colors.grid;
+                    
+                    chart.options.scales.x.ticks.color = colors.text;
+                    chart.options.scales.y.ticks.color = colors.text;
+                    if (chart.options.scales.y1) chart.options.scales.y1.ticks.color = colors.text;
+                    
+                    chart.update();
+                }
+            });
+        }
+
+        function initCharts() {
+            const colors = getChartColors(savedTheme);
+            
+            // Rate Latency Chart
+            chartRateLatency = new Chart(document.getElementById('chart-rate-latency'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Request Rate (rps)',
+                            borderColor: colors.rateColor,
+                            backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                            data: [],
+                            yAxisID: 'y',
+                            tension: 0.3,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Avg Latency (ms)',
+                            borderColor: colors.latencyColor,
+                            backgroundColor: 'rgba(251, 188, 5, 0.1)',
+                            data: [],
+                            yAxisID: 'y1',
+                            tension: 0.3,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: colors.grid }, ticks: { color: colors.text } },
+                        y: { position: 'left', grid: { color: colors.grid }, ticks: { color: colors.text }, title: { display: true, text: 'RPS' } },
+                        y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: colors.text }, title: { display: true, text: 'MS' } }
+                    },
+                    plugins: { legend: { display: true, labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+
+            // HTTP 500 Chart
+            chartErrors = new Chart(document.getElementById('chart-errors'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'HTTP 500 rate (%)',
+                        borderColor: colors.errorColor,
+                        backgroundColor: 'rgba(234, 67, 53, 0.1)',
+                        data: [],
+                        tension: 0.2,
+                        fill: true,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: colors.grid }, ticks: { color: colors.text } },
+                        y: { min: 0, max: 100, grid: { color: colors.grid }, ticks: { color: colors.text } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // CPU & Memory Chart
+            chartResources = new Chart(document.getElementById('chart-resources'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'CPU Limit %',
+                            borderColor: colors.cpuColor,
+                            data: [],
+                            tension: 0.3,
+                            borderWidth: 1.5,
+                            pointRadius: 1
+                        },
+                        {
+                            label: 'Memory Limit %',
+                            borderColor: colors.memColor,
+                            data: [],
+                            tension: 0.3,
+                            borderWidth: 1.5,
+                            pointRadius: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: colors.grid }, ticks: { color: colors.text } },
+                        y: { min: 0, max: 100, grid: { color: colors.grid }, ticks: { color: colors.text } }
+                    },
+                    plugins: { legend: { display: true, labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
+
+        initCharts();
+
+        // Connect to SSE Endpoint
+        function connectSSE() {
+            const eventSource = new EventSource('/api/events');
+
+            eventSource.addEventListener('system_update', (e) => {
+                const data = JSON.parse(e.data);
+                
+                // Update Badge
+                const badge = document.getElementById('incident-badge');
+                const dot = document.getElementById('incident-badge-dot');
+                const text = document.getElementById('incident-badge-text');
+                
+                // Update button disabled statuses
+                const btnTrigger = document.getElementById('btn-trigger');
+                
+                // UI styles based on state
+                let badgeClass = '';
+                let dotClass = '';
+                let statusLabel = data.state;
+                
+                if (data.state === 'Healthy') {
+                    badgeClass = 'bg-green-50 border-green-200 text-gcp-green dark:bg-green-950/20 dark:border-green-900';
+                    dotClass = 'bg-gcp-green pulse-indicator-green';
+                    btnTrigger.disabled = false;
+                } else if (data.state === 'Closed' || data.state === 'Recovered') {
+                    badgeClass = 'bg-green-50 border-green-200 text-gcp-green dark:bg-green-950/20 dark:border-green-900';
+                    dotClass = 'bg-gcp-green';
+                    btnTrigger.disabled = false;
+                } else if (data.state === 'Waiting Approval') {
+                    badgeClass = 'bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-950/20 dark:border-yellow-900';
+                    dotClass = 'bg-gcp-yellow pulse-indicator-green';
+                    btnTrigger.disabled = true;
+                } else {
+                    badgeClass = 'bg-red-50 border-red-200 text-gcp-red dark:bg-red-950/20 dark:border-red-900';
+                    dotClass = 'bg-gcp-red pulse-indicator-red';
+                    btnTrigger.disabled = true;
+                }
+                
+                badge.className = `px-3 py-1.5 rounded-full text-xs font-semibold flex items-center space-x-1.5 border transition-all ${badgeClass}`;
+                dot.className = `w-2.5 h-2.5 rounded-full inline-block ${dotClass}`;
+                text.innerText = statusLabel;
+
+                // Update Cards Info
+                document.getElementById('card-availability').innerText = `${data.availability}%`;
+                document.getElementById('card-latency').innerText = `${Math.round(data.latency)} ms`;
+                document.getElementById('card-error-rate').innerText = `${data.error_rate}%`;
+                document.getElementById('card-revision').innerText = data.current_revision.replace('sample-payment-service-', '');
+
+                // Color health indicators
+                const availIconBg = document.getElementById('icon-availability-bg');
+                const availIcon = document.getElementById('icon-availability');
+                if (data.availability > 99) {
+                    availIconBg.className = 'p-3 bg-green-50 dark:bg-green-950 rounded-full';
+                    availIcon.className = 'material-symbols-outlined text-gcp-green text-2xl';
+                    availIcon.innerText = 'check_circle';
+                } else if (data.availability > 50) {
+                    availIconBg.className = 'p-3 bg-yellow-50 dark:bg-yellow-950 rounded-full';
+                    availIcon.className = 'material-symbols-outlined text-gcp-yellow text-2xl';
+                    availIcon.innerText = 'warning';
+                } else {
+                    availIconBg.className = 'p-3 bg-red-50 dark:bg-red-950 rounded-full';
+                    availIcon.className = 'material-symbols-outlined text-gcp-red text-2xl';
+                    availIcon.innerText = 'cancel';
+                }
+
+                const latencyIconBg = document.getElementById('icon-latency-bg');
+                const latencyIcon = document.getElementById('icon-latency');
+                if (data.latency < 150) {
+                    latencyIconBg.className = 'p-3 bg-blue-50 dark:bg-blue-950 rounded-full';
+                    latencyIcon.className = 'material-symbols-outlined text-gcp-blue text-2xl';
+                } else {
+                    latencyIconBg.className = 'p-3 bg-yellow-50 dark:bg-yellow-950 rounded-full';
+                    latencyIcon.className = 'material-symbols-outlined text-gcp-yellow text-2xl';
+                }
+
+                const errorIconBg = document.getElementById('icon-error-bg');
+                const errorIcon = document.getElementById('icon-error');
+                if (data.error_rate < 1) {
+                    errorIconBg.className = 'p-3 bg-green-50 dark:bg-green-950 rounded-full';
+                    errorIcon.className = 'material-symbols-outlined text-gcp-green text-2xl';
+                    errorIcon.innerText = 'check_circle';
+                } else {
+                    errorIconBg.className = 'p-3 bg-red-50 dark:bg-red-950 rounded-full';
+                    errorIcon.className = 'material-symbols-outlined text-gcp-red text-2xl';
+                    errorIcon.innerText = 'error';
+                }
+
+                // Cloud Run Panel Info
+                document.getElementById('cloudrun-current-rev').innerText = data.current_revision;
+                document.getElementById('cloudrun-traffic-split').innerText = `${data.traffic_split[data.current_revision] || 0}% traffic`;
+                
+                const cloudRunStatus = document.getElementById('cloudrun-status');
+                cloudRunStatus.innerText = data.deployment_status;
+                if (data.deployment_status === 'HEALTHY') {
+                    cloudRunStatus.className = 'text-xs px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-gcp-green dark:text-green-300 rounded font-mono font-medium';
+                } else {
+                    cloudRunStatus.className = 'text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-gcp-red dark:text-red-300 rounded font-mono font-medium';
+                }
+
+                // Progress Bar
+                const remediationPanel = document.getElementById('remediation-panel');
+                const bar = document.getElementById('remediation-progress-bar');
+                const stepLabel = document.getElementById('remediation-step-label');
+                const percentLabel = document.getElementById('remediation-percent-label');
+                
+                if (data.state === 'Executing' || data.state === 'Verification' || data.state === 'Recovered') {
+                    remediationPanel.classList.remove('opacity-50');
+                    bar.style.width = `${data.remediation_progress}%`;
+                    stepLabel.innerText = `Current Step: ${data.remediation_step}`;
+                    percentLabel.innerText = `${data.remediation_progress}%`;
+                } else {
+                    remediationPanel.classList.add('opacity-50');
+                    bar.style.width = '0%';
+                    stepLabel.innerText = 'Current Step: Idle';
+                    percentLabel.innerText = '0%';
+                }
+
+                // Show/Hide Approval buttons in Chat Box
+                const approvalPanel = document.getElementById('approval-actions-panel');
+                if (data.state === 'Waiting Approval') {
+                    approvalPanel.classList.remove('hidden');
+                } else {
+                    approvalPanel.classList.add('hidden');
+                }
+                
+                // Show/Hide reasoning panel and report
+                if (data.has_reasoning) {
+                    document.getElementById('reasoning-panel').classList.remove('hidden');
+                    fetchIncidentReasoning();
+                } else {
+                    document.getElementById('reasoning-panel').classList.add('hidden');
+                }
+                
+                if (data.has_report) {
+                    document.getElementById('report-panel').classList.remove('hidden');
+                    fetchIncidentReport();
+                } else {
+                    document.getElementById('report-panel').classList.add('hidden');
+                }
+            });
+
+            eventSource.addEventListener('timeline_update', (e) => {
+                const events = JSON.parse(e.data);
+                const container = document.getElementById('timeline-container');
+                document.getElementById('timeline-count').innerText = `${events.length} events`;
+                
+                // Keep track of existing event timestamps+messages to avoid re-rendering list
+                let html = '';
+                events.forEach(event => {
+                    let dotColor = 'border-gcp-blue bg-blue-100 text-gcp-blue dark:bg-blue-900/30';
+                    let textClass = 'text-gray-600 dark:text-gray-400';
+                    
+                    if (event.severity === 'ERROR') {
+                        dotColor = 'border-gcp-red bg-red-100 text-gcp-red dark:bg-red-950/20';
+                        textClass = 'text-gcp-red font-medium';
+                    } else if (event.severity === 'WARNING') {
+                        dotColor = 'border-gcp-yellow bg-yellow-100 text-yellow-800 dark:bg-yellow-950/20';
+                        textClass = 'text-yellow-700 dark:text-yellow-300';
+                    } else if (event.severity === 'SUCCESS') {
+                        dotColor = 'border-gcp-green bg-green-100 text-gcp-green dark:bg-green-950/20';
+                        textClass = 'text-gcp-green font-medium';
+                    }
+                    
+                    html += `
+                        <div class="flex space-x-3 timeline-item-anim">
+                            <div class="flex flex-col items-center">
+                                <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${dotColor}">
+                                    ${event.severity === 'SUCCESS' ? '✓' : event.severity === 'ERROR' ? '!' : '•'}
+                                </div>
+                                <div class="w-[2px] bg-gray-200 dark:bg-gcp-darkBorder flex-1 my-1"></div>
+                            </div>
+                            <div class="flex-1 pb-4">
+                                <span class="text-[10px] font-mono text-gray-400 block">${event.timestamp}</span>
+                                <p class="text-xs ${textClass} mt-0.5">${event.message}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            });
+
+            eventSource.addEventListener('chat_update', (e) => {
+                try {
+                    const messages = JSON.parse(e.data);
+                    const container = document.getElementById('chat-messages-container');
+                    if (!container) return;
+                    
+                    let html = '';
+                    messages.forEach(msg => {
+                        const isAI = msg.sender === 'AI';
+                        const isSystem = msg.sender === 'System';
+                        
+                        if (isSystem) {
+                            html += `
+                                <div class="flex justify-center">
+                                    <span class="bg-gray-200 dark:bg-gcp-darkBorder text-gray-600 dark:text-gray-300 px-3 py-1 rounded-full text-[10px] font-mono border border-gcp-border dark:border-gcp-darkBorder">
+                                        ${msg.text}
+                                    </span>
+                                </div>
+                            `;
+                        } else {
+                            const avatarBg = isAI ? 'bg-purple-600' : 'bg-gcp-blue';
+                            const avatarText = isAI ? 'AI' : 'OP';
+                            const bubbleBg = isAI 
+                                ? 'bg-white dark:bg-gcp-darkCard text-gray-800 dark:text-gray-100 border border-gcp-border dark:border-gcp-darkBorder' 
+                                : 'bg-gcp-blue text-white';
+                            
+                            // Use marked.parse if marked is available, otherwise raw text
+                            let renderedText = msg.text;
+                            if (typeof marked !== 'undefined') {
+                                try {
+                                    renderedText = marked.parse(msg.text);
+                                } catch (me) {
+                                    console.error("Markdown parsing failed", me);
+                                }
+                            }
+                            
+                            html += `
+                                <div class="flex items-start space-x-2.5 ${!isAI ? 'flex-row-reverse space-x-reverse' : ''}">
+                                    <div class="h-7 w-7 rounded-full ${avatarBg} text-white flex items-center justify-center font-bold text-[10px] shadow-sm flex-shrink-0">
+                                        ${avatarText}
+                                    </div>
+                                    <div class="flex flex-col max-w-[80%] ${!isAI ? 'items-end' : 'items-start'}">
+                                        <div class="px-3.5 py-2 rounded-lg text-xs leading-relaxed ${bubbleBg} prose dark:prose-invert max-w-none">
+                                            ${renderedText}
+                                        </div>
+                                        <span class="text-[9px] text-gray-400 mt-1 font-mono ${!isAI ? 'text-right' : ''}">${msg.timestamp}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    container.innerHTML = html;
+                    
+                    // Force scroll to bottom on every update
+                    container.scrollTop = container.scrollHeight;
+                } catch (err) {
+                    console.error("Error in chat_update:", err);
+                    showToast("Error rendering chat: " + err.message, "error");
+                }
+            });
+
+            eventSource.addEventListener('metrics_update', (e) => {
+                const metrics = JSON.parse(e.data);
+                
+                const labels = metrics.map(m => m.timestamp);
+                const requestRates = metrics.map(m => m.request_rate);
+                const latencies = metrics.map(m => m.latency);
+                const errors = metrics.map(m => m.http_500_rate);
+                const cpu = metrics.map(m => m.cpu);
+                const memory = metrics.map(m => m.memory);
+                
+                // Update Rate & Latency
+                chartRateLatency.data.labels = labels;
+                chartRateLatency.data.datasets[0].data = requestRates;
+                chartRateLatency.data.datasets[1].data = latencies;
+                chartRateLatency.update();
+
+                // Update Errors
+                chartErrors.data.labels = labels;
+                chartErrors.data.datasets[0].data = errors;
+                chartErrors.update();
+
+                // Update Resources
+                chartResources.data.labels = labels;
+                chartResources.data.datasets[0].data = cpu;
+                chartResources.data.datasets[1].data = memory;
+                chartResources.update();
+            });
+
+            eventSource.onerror = (e) => {
+                console.error("SSE connection lost. Reconnecting in 3s...");
+                eventSource.close();
+                setTimeout(connectSSE, 3000);
+            };
+        }
+
+        connectSSE();
+
+        // Fetch logs with filter
+        function fetchLogs() {
+            const severity = document.getElementById('severity-filter').value;
+            const url = severity ? `/api/logs?severity=${severity}` : '/api/logs';
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(logs => {
+                    const container = document.getElementById('logs-container');
+                    if (logs.length === 0) {
+                        container.innerHTML = '<div class="text-gray-500 italic">No logs found.</div>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    logs.forEach(log => {
+                        let sevClass = 'text-blue-400';
+                        if (log.severity === 'ERROR') sevClass = 'text-red-400';
+                        if (log.severity === 'WARNING') sevClass = 'text-yellow-400';
+                        
+                        html += `
+                            <div class="py-0.5 border-b border-gray-900 flex flex-col md:flex-row md:space-x-4">
+                                <span class="text-gray-500 flex-shrink-0 font-mono">${log.timestamp.slice(11,19)}</span>
+                                <span class="${sevClass} font-semibold flex-shrink-0 w-16">${log.severity}</span>
+                                <span class="text-gray-400 flex-shrink-0 font-mono">[${log.revision.replace('sample-payment-service-', '')}]</span>
+                                <span class="text-gray-300 break-all">${log.message}</span>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                });
+        }
+        
+        // Poll logs every 3s
+        setInterval(fetchLogs, 3000);
+        fetchLogs();
+
+        // Chat Form Submission
+        function sendChatMessage(e) {
+            e.preventDefault();
+            const field = document.getElementById('chat-input-field');
+            const text = field.value.trim();
+            if (!text) return;
+            
+            field.value = '';
+            
+            showToast("Sending message to SRE agent...", "info", 1500);
+            
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            })
+            .then(res => {
+                if (res.ok) {
+                    showToast("Message delivered!", "success", 1200);
+                } else {
+                    res.json().then(data => showToast(data.detail || "Failed to deliver message.", "error"));
+                }
+            })
+            .catch(err => {
+                showToast("Network error delivering message: " + err.message, "error");
+            });
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'info', duration = 3500) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed bottom-24 right-6 z-50 flex flex-col space-y-3 max-w-sm w-full';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-slate-900/95 border-slate-700/80 text-white';
+            let icon = 'info';
+            let iconColor = 'text-sky-400';
+            
+            if (type === 'success') {
+                bgClass = 'bg-emerald-950/95 border-emerald-800 text-emerald-100';
+                icon = 'check_circle';
+                iconColor = 'text-emerald-400';
+            } else if (type === 'error') {
+                bgClass = 'bg-rose-950/95 border-rose-800 text-rose-100';
+                icon = 'error';
+                iconColor = 'text-rose-400';
+            } else if (type === 'warning') {
+                bgClass = 'bg-amber-950/95 border-amber-800 text-amber-100';
+                icon = 'warning';
+                iconColor = 'text-amber-400';
+            }
+
+            toast.className = `p-4 rounded-xl border shadow-2xl flex items-center space-x-3 transition-all duration-300 transform translate-y-4 opacity-0 toast-entrance ${bgClass}`;
+            
+            toast.innerHTML = `
+                <span class="material-symbols-outlined ${iconColor} text-xl flex-shrink-0">${icon}</span>
+                <div class="flex-1 text-xs font-medium tracking-wide leading-relaxed">${message}</div>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined text-sm">close</span>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+
+            // Auto-dismiss
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, duration);
+        }
+
+        // Button Loading State Helper
+        function setButtonLoading(button, isLoading) {
+            if (!button) return;
+            const iconSpan = button.querySelector('.material-symbols-outlined');
+            
+            if (isLoading) {
+                button.disabled = true;
+                button.classList.add('opacity-60');
+                if (iconSpan) {
+                    button.dataset.originalIcon = iconSpan.innerText;
+                    iconSpan.innerText = 'progress_activity';
+                    iconSpan.classList.add('animate-spin');
+                }
+            } else {
+                button.disabled = false;
+                button.classList.remove('opacity-60');
+                if (iconSpan && button.dataset.originalIcon) {
+                    iconSpan.innerText = button.dataset.originalIcon;
+                    iconSpan.classList.remove('animate-spin');
+                }
+            }
+        }
+
+        // Global HTMX Event Listeners for Incident Simulation Buttons
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            const path = evt.detail.path;
+            const element = evt.detail.elt;
+            
+            if (path === '/api/trigger_incident') {
+                showToast("Simulating a production alert trigger in Google Cloud Run...", "warning");
+                setButtonLoading(element, true);
+            } else if (path === '/api/restore') {
+                showToast("Reverting system configs to a healthy baseline environment...", "info");
+                setButtonLoading(element, true);
+            }
+        });
+
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            const path = evt.detail.path;
+            const element = evt.detail.elt;
+            const xhr = evt.detail.xhr;
+            
+            if (path === '/api/trigger_incident' || path === '/api/restore') {
+                setButtonLoading(element, false);
+                
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const res = JSON.parse(xhr.responseText);
+                        if (res.status === 'success') {
+                            showToast(res.message || "Operation triggered successfully!", "success");
+                        } else if (res.status === 'ignored') {
+                            showToast(res.message || "Operation was ignored.", "info");
+                        }
+                    } catch (e) {
+                        showToast("Action completed.", "success");
+                    }
+                } else {
+                    showToast(`Failed: API returned status ${xhr.status} (${xhr.statusText})`, "error");
+                }
+            }
+        });
+
+        // Upgraded Action Handlers
+        function approveRollback(btn) {
+            if (btn) setButtonLoading(btn, true);
+            showToast("Approving autonomous remediation rollback deployment...", "info");
+            
+            fetch('/api/approve', { method: 'POST' })
+                .then(res => {
+                    if (btn) setButtonLoading(btn, false);
+                    if (res.ok) {
+                        showToast("Rollback approved! The SRE agent is executing traffic redirection.", "success");
+                    } else {
+                        res.json().then(data => showToast(data.detail || "Failed to approve rollback.", "error"));
+                    }
+                })
+                .catch(err => {
+                    if (btn) setButtonLoading(btn, false);
+                    showToast("Error approving rollback: " + err.message, "error");
+                });
+        }
+
+        // Upgraded Rejection Handler
+        function rejectRollback(btn) {
+            const feedback = prompt("Please provide feedback for rejection:", "Too risky at this time");
+            if (feedback === null) return;
+            
+            if (btn) setButtonLoading(btn, true);
+            showToast("Submitting rollback rejection to the SRE agent...", "warning");
+            
+            fetch('/api/reject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ feedback: feedback })
+            })
+                .then(res => {
+                    if (btn) setButtonLoading(btn, false);
+                    if (res.ok) {
+                        showToast("Remediation rollback was rejected. SRE agent notified.", "error");
+                    } else {
+                        res.json().then(data => showToast(data.detail || "Failed to submit rejection.", "error"));
+                    }
+                })
+                .catch(err => {
+                    if (btn) setButtonLoading(btn, false);
+                    showToast("Error rejecting action: " + err.message, "error");
+                });
+        }
+
+        // Upgraded Manual Rollback Handler
+        function triggerManualRollback(btn) {
+            if (confirm("Are you sure you want to manually trigger a rollback to the previous healthy revision?")) {
+                if (btn) setButtonLoading(btn, true);
+                showToast("Initiating manual rollback sequence...", "warning");
+                
+                fetch('/api/rollback', { method: 'POST' })
+                    .then(res => {
+                        if (btn) setButtonLoading(btn, false);
+                        if (res.ok) {
+                            showToast("Manual rollback started! Rolling back to previous stable release.", "success");
+                        } else {
+                            res.json().then(data => showToast(data.detail || "Manual rollback failed.", "error"));
+                        }
+                    })
+                    .catch(err => {
+                        if (btn) setButtonLoading(btn, false);
+                        showToast("Error executing manual rollback: " + err.message, "error");
+                    });
+            }
+        }
+
+        // Fetch AI reasoning details
+        let lastReasoningStr = '';
+        function fetchIncidentReasoning() {
+            fetch('/api/incident')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.active && data.ai_reasoning) {
+                        const r = data.ai_reasoning;
+                        
+                        // Check if content changed before rendering
+                        const str = JSON.stringify(r);
+                        if (str === lastReasoningStr) return;
+                        lastReasoningStr = str;
+                        
+                        document.getElementById('reasoning-confidence').innerText = `Confidence: ${r.confidence_score}%`;
+                        document.getElementById('reasoning-symptoms').innerText = r.observed_symptoms;
+                        document.getElementById('reasoning-evidence').innerText = r.evidence;
+                        document.getElementById('reasoning-root-cause').innerText = r.root_cause;
+                        document.getElementById('reasoning-action').innerText = r.recommended_action;
+                        document.getElementById('reasoning-recovery').innerText = r.estimated_recovery_time;
+                    }
+                });
+        }
+
+        // Fetch Incident Report
+        let lastReportStr = '';
+        function fetchIncidentReport() {
+            fetch('/api/report')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.report_available && data.report) {
+                        const report = data.report;
+                        const str = JSON.stringify(report);
+                        if (str === lastReportStr) return;
+                        lastReportStr = str;
+                        
+                        // Parse markdown
+                        document.getElementById('report-content').innerHTML = marked.parse(report.markdown_content);
+                    }
+                });
+        }
+
+        // Report actions
+        function copyReport() {
+            fetch('/api/report')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.report_available && data.report) {
+                        navigator.clipboard.writeText(data.report.markdown_content)
+                            .then(() => alert("Incident report copied to clipboard as Markdown!"))
+                            .catch(err => console.error("Failed to copy report", err));
+                    }
+                });
+        }
+
+        function downloadReport() {
+            fetch('/api/report')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.report_available && data.report) {
+                        const blob = new Blob([data.report.markdown_content], { type: 'text/markdown' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `incident_report_${data.report.incident_id}.md`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

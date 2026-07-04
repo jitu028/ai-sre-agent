@@ -1,0 +1,88 @@
+[
+  {
+    "timestamp": "2026-07-04T06:30:00.102Z",
+    "severity": "INFO",
+    "message": "Starting payment-service version 1.0.0",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1"
+  },
+  {
+    "timestamp": "2026-07-04T06:30:05.412Z",
+    "severity": "INFO",
+    "message": "Application startup complete. Listening on port 8080",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1"
+  },
+  {
+    "timestamp": "2026-07-04T06:30:10.510Z",
+    "severity": "INFO",
+    "message": "Incoming request POST /payment",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1",
+    "request_id": "req-9e2c88f1",
+    "trace_id": "trace-4043b879"
+  },
+  {
+    "timestamp": "2026-07-04T06:30:10.512Z",
+    "severity": "INFO",
+    "message": "Processing payment request for amount=550.0 USD",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1",
+    "request_id": "req-9e2c88f1",
+    "trace_id": "trace-4043b879"
+  },
+  {
+    "timestamp": "2026-07-04T06:30:10.515Z",
+    "severity": "ERROR",
+    "message": "Fatal exception during payment verification: MISSING_PAYMENT_KEY",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1",
+    "request_id": "req-9e2c88f1",
+    "trace_id": "trace-4043b879"
+  },
+  {
+    "timestamp": "2026-07-04T06:30:10.520Z",
+    "severity": "ERROR",
+    "message": "Request failed: 500 Internal Server Error - Configuration Failure: MISSING_PAYMENT_KEY",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1",
+    "request_id": "req-9e2c88f1",
+    "trace_id": "trace-4043b879"
+  },
+  {
+    "timestamp": "2026-07-04T06:30:15.820Z",
+    "severity": "INFO",
+    "message": "Incoming request GET /health",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1",
+    "request_id": "req-88c1aefb",
+    "trace_id": "trace-77c8e9fa"
+  },
+  {
+    "timestamp": "2026-07-04T06:30:15.822Z",
+    "severity": "ERROR",
+    "message": "Health check failed due to bad configuration: ENABLE_BAD_CONFIG is true",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1",
+    "request_id": "req-88c1aefb",
+    "trace_id": "trace-77c8e9fa"
+  },
+  {
+    "timestamp": "2026-07-04T06:30:20.115Z",
+    "severity": "WARNING",
+    "message": "High-value payment request detected: 6500.0 USD",
+    "service": "sample-payment-service",
+    "revision": "sample-payment-service-v15",
+    "region": "us-central1",
+    "request_id": "req-1a2b3c4d",
+    "trace_id": "trace-9e8d7c6b"
+  }
+]
