@@ -84,6 +84,6 @@ To explore the architecture, sequence flows, and guides in detail, check the fil
 - **[System Architecture Diagram](file:///Users/jitendragupta/Documents/github-repo/ai-sre-agent/docs/architecture.md)**: Visualizes component interactions, alert channels, and data flow.
 - **[Incident Execution Sequence](file:///Users/jitendragupta/Documents/github-repo/ai-sre-agent/docs/sequence.md)**: Standard time-sequence chart mapping operations from alert trigger to report generation.
 - **[GCP Deployment & CI/CD Guide](file:///Users/jitendragupta/Documents/github-repo/ai-sre-agent/docs/deployment.md)**: Setup and deployment workflow for production GCP environments.
-- **[GCP Project Setup Guide (gcp-adk-demo-028)](file:///Users/jitendragupta/Documents/github-repo/ai-sre-agent/docs/prepare_project.md)**: Dynamic step-by-step walk-through for preparing the demo project `gcp-adk-demo-028`.
+- **[GCP Project Setup Guide](file:///Users/jitendragupta/Documents/github-repo/ai-sre-agent/docs/prepare_project.md)**: Dynamic step-by-step walk-through for preparing your demo project `YOUR_GCP_PROJECT_ID`.
 - **[Live Presenter Script](file:///Users/jitendragupta/Documents/github-repo/ai-sre-agent/docs/demo.md)**: Step-by-step walkthrough script for presenting this demo live on stage.
 - **[Troubleshooting Reference](file:///Users/jitendragupta/Documents/github-repo/ai-sre-agent/docs/troubleshooting.md)**: Resolving port issues, import errors, or connection losses.

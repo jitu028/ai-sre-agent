@@ -1,6 +1,6 @@
-# How-To: Prepare GCP Project gcp-adk-demo-028 for the Demo
+# How-To: Prepare GCP Project YOUR_GCP_PROJECT_ID for the Demo
 
-This guide explains how to prepare the Google Cloud Platform (GCP) project `gcp-adk-demo-028` for the live SRE Agent demo.
+This guide explains how to prepare the Google Cloud Platform (GCP) project `YOUR_GCP_PROJECT_ID` for the live SRE Agent demo.
 
 ---
 
@@ -14,8 +14,8 @@ gcloud auth login
 # 2. Authenticate Application Default Credentials (ADC) for Python/ADK SDK tools
 gcloud auth application-default login
 
-# 3. Set the active project to gcp-adk-demo-028
-gcloud config set project gcp-adk-demo-028
+# 3. Set the active project to YOUR_GCP_PROJECT_ID
+gcloud config set project YOUR_GCP_PROJECT_ID
 ```
 
 ---
@@ -37,7 +37,7 @@ gcloud services enable \
 ---
 
 ## Step 3: Provision Resources via Terraform
-We have pre-configured `terraform/terraform.tfvars` with the project ID `gcp-adk-demo-028`.
+We have pre-configured `terraform/terraform.tfvars` with the project ID `YOUR_GCP_PROJECT_ID`.
 
 1. Navigate to the terraform directory:
    ```bash
@@ -64,12 +64,12 @@ gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
 ### 2. Build and Deploy Payment Service (Target)
 ```bash
 # Build and Push
-docker build --platform linux/amd64 -t us-central1-docker.pkg.dev/gcp-adk-demo-028/ai-sre-demo-repo/sample-payment-service:v1 ./sample-payment-service
-docker push us-central1-docker.pkg.dev/gcp-adk-demo-028/ai-sre-demo-repo/sample-payment-service:v1
+docker build --platform linux/amd64 -t us-central1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/ai-sre-demo-repo/sample-payment-service:v1 ./sample-payment-service
+docker push us-central1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/ai-sre-demo-repo/sample-payment-service:v1
 
 # Deploy to Cloud Run
 gcloud run deploy sample-payment-service \
-  --image=us-central1-docker.pkg.dev/gcp-adk-demo-028/ai-sre-demo-repo/sample-payment-service:v1 \
+  --image=us-central1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/ai-sre-demo-repo/sample-payment-service:v1 \
   --region=us-central1 \
   --allow-unauthenticated
 ```
@@ -77,15 +77,15 @@ gcloud run deploy sample-payment-service \
 ### 3. Build and Deploy SRE Agent Dashboard
 ```bash
 # Build and Push
-docker build --platform linux/amd64 -t us-central1-docker.pkg.dev/gcp-adk-demo-028/ai-sre-demo-repo/ai-sre-agent-dashboard:latest .
-docker push us-central1-docker.pkg.dev/gcp-adk-demo-028/ai-sre-demo-repo/ai-sre-agent-dashboard:latest
+docker build --platform linux/amd64 -t us-central1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/ai-sre-demo-repo/ai-sre-agent-dashboard:latest .
+docker push us-central1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/ai-sre-demo-repo/ai-sre-agent-dashboard:latest
 
 # Deploy to Cloud Run
 gcloud run deploy ai-sre-agent-dashboard \
-  --image=us-central1-docker.pkg.dev/gcp-adk-demo-028/ai-sre-demo-repo/ai-sre-agent-dashboard:latest \
+  --image=us-central1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/ai-sre-demo-repo/ai-sre-agent-dashboard:latest \
   --region=us-central1 \
   --allow-unauthenticated \
-  --set-env-vars="DEMO_MODE=false,GOOGLE_CLOUD_PROJECT=gcp-adk-demo-028,GEMINI_MODEL=gemini-3.5-flash"
+  --set-env-vars="DEMO_MODE=false,GOOGLE_CLOUD_PROJECT=YOUR_GCP_PROJECT_ID,GEMINI_MODEL=gemini-3.5-flash"
 ```
 
 Once deployed, the `ai-sre-agent-dashboard` URL is printed in the terminal. Open this URL to load the live Operations Center!
