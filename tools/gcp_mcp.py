@@ -65,6 +65,9 @@ def get_simulated_recent_logs(service_name: str, limit: int) -> dict:
 def read_recent_logs(service_name: str, limit: int) -> dict:
     """Reads recent log entries for a Google Cloud Run service.
 
+    This tool implements the 'list_log_entries' tool defined in the 
+    Google Cloud Logging MCP Server (https://logging.googleapis.com/mcp).
+
     Args:
         service_name: The name of the Cloud Run service.
         limit: The maximum number of log entries to retrieve.
@@ -107,6 +110,9 @@ def read_recent_logs(service_name: str, limit: int) -> dict:
 
 def read_error_logs(service_name: str, limit: int) -> dict:
     """Reads error logs (severity ERROR) for a Google Cloud Run service.
+
+    This tool implements the 'list_log_entries' tool with error filters defined in the
+    Google Cloud Logging MCP Server (https://logging.googleapis.com/mcp).
 
     Args:
         service_name: The name of the Cloud Run service.
@@ -188,6 +194,9 @@ def read_error_logs(service_name: str, limit: int) -> dict:
 
 def read_metrics(service_name: str, metric_type: str, duration_minutes: int) -> dict:
     """Reads Cloud Monitoring metrics for a Cloud Run service.
+
+    This tool implements the 'list_timeseries' tool defined in the
+    Google Cloud Monitoring MCP Server (https://monitoring.googleapis.com/mcp).
 
     Args:
         service_name: The name of the Cloud Run service.
@@ -325,6 +334,9 @@ def read_metrics(service_name: str, metric_type: str, duration_minutes: int) -> 
 def list_revisions(service_name: str) -> dict:
     """Lists recent revisions for a Google Cloud Run service, including their traffic split.
 
+    This tool implements the 'list' and 'get' service schema defined in the
+    Google Cloud Run MCP Server (https://run.googleapis.com/mcp).
+
     Args:
         service_name: The name of the Cloud Run service.
 
@@ -444,6 +456,9 @@ def list_revisions(service_name: str) -> dict:
 def describe_revision(revision_name: str) -> dict:
     """Describes details of a specific Cloud Run revision.
 
+    This tool implements the 'get' service and revision specifications defined in the
+    Google Cloud Run MCP Server (https://run.googleapis.com/mcp).
+
     Args:
         revision_name: The name of the Cloud Run revision.
 
@@ -532,6 +547,9 @@ def describe_revision(revision_name: str) -> dict:
 
 def rollback_revision(service_name: str, target_revision: str) -> dict:
     """Rolls back a Cloud Run service to direct 100% traffic to the target healthy revision.
+
+    This tool implements the 'deploy' / update service traffic splits defined in the
+    Google Cloud Run MCP Server (https://run.googleapis.com/mcp).
 
     Args:
         service_name: The name of the Cloud Run service.
